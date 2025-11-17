@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gratten/ownpath/internal/db"
 	"github.com/gratten/ownpath/internal/handlers" // Adjust based on your module name
 	// Adjust based on your module name
 )
@@ -22,6 +23,11 @@ func withLoggingAndErrorHandling(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func main() {
+	// Initialize the database (this creates/opens ownpath.db and sets up the schema)
+	if err := db.InitDB("./ownpath.db"); err != nil { // Adjust path if needed (e.g., for Docker/Start9)
+		log.Fatalf("Failed to initialize database: %v", err) // Crash if init fails
+	}
+	defer db.CloseDB() // Ensure the DB closes cleanly on exit
 	// Set up routes with logging and error handling
 	// http.HandleFunc("/health", withLoggingAndErrorHandling(handlers.HealthHandler))
 	// http.HandleFunc("/api/activities", withLoggingAndErrorHandling(handlers.ActivitiesHandler))
