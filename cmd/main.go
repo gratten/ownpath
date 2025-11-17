@@ -23,9 +23,10 @@ func withLoggingAndErrorHandling(next http.HandlerFunc) http.HandlerFunc {
 
 func main() {
 	// Set up routes with logging and error handling
-	http.HandleFunc("/health", withLoggingAndErrorHandling(handlers.HealthHandler))
-	http.HandleFunc("/api/activities", withLoggingAndErrorHandling(handlers.ActivitiesHandler))
-	http.HandleFunc("/api/sync", withLoggingAndErrorHandling(handlers.SyncHandler))
+	// http.HandleFunc("/health", withLoggingAndErrorHandling(handlers.HealthHandler))
+	// http.HandleFunc("/api/activities", withLoggingAndErrorHandling(handlers.ActivitiesHandler))
+	// http.HandleFunc("/api/sync", withLoggingAndErrorHandling(handlers.SyncHandler))
+	http.HandleFunc("/api/upload", handlers.UploadHandler)
 
 	// Start the server
 	port := ":8080" // Default port; can be configured later for Start9
