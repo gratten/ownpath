@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Detail - OwnPath</title>
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"> <!-- Leaflet CSS CDN -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script> <!-- HTMX CDN -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> <!-- Leaflet JS CDN -->
+    <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script> <!-- Leaflet GPX plugin for loading GPX tracks -->
+</head>
+<body>
+    <header>
+        <h1>Activity Detail</h1>
+        <a href="/">Back to Dashboard</a>
+    </header>
+    
+    <main>
+        <!-- Stats Section (loaded dynamically) -->
+        <section id="stats" hx-get="/api/activity?id={insert-id-here}" hx-trigger="load" hx-swap="innerHTML">
+            <!-- HTMX will insert stats HTML here, e.g., <p>Type: Running | Distance: 5.2km | Elevation: 100m</p> -->
+        </section>
+        
+        <!-- Map Section -->
+        <section>
+            <h2>Route Map</h2>
+            <div id="map" style="height: 400px;"></div>
+        </section>
+    </main>
+    
+    <script>
+        // Initialize Leaflet map
+        var map = L.map('map').setView([0, 0], 2); // Default view
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Use HTMX to fetch GPX and load it (assuming /api/activity returns GPX in a div with id="gpx-data")
+        htmx.onLoad(function() {
+            htmx.ajax('GET', '/api/activity?id={insert-id-here}', {target: '#stats'}).then(function() {
+                var gpxData = document.getElementById('gpx-data').innerHTML; // Assume backend injects <div id="gpx-data">GPX XML</div>
+                new L.GPX(gpxData, {async: true}).on('loaded', function(e) {
+                    map.fitBounds(e.target.getBounds());
+                }).addTo(map);
+            });
+        });
+    </script>
+</body>
+</html>

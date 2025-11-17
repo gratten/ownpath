@@ -30,7 +30,7 @@ func main() {
 	defer db.CloseDB() // Ensure the DB closes cleanly on exit
 	// Set up routes with logging and error handling
 	// http.HandleFunc("/health", withLoggingAndErrorHandling(handlers.HealthHandler))
-	// http.HandleFunc("/api/activities", withLoggingAndErrorHandling(handlers.ActivitiesHandler))
+	http.HandleFunc("/api/activities", withLoggingAndErrorHandling(handlers.ActivitiesHandler))
 	// http.HandleFunc("/api/sync", withLoggingAndErrorHandling(handlers.SyncHandler))
 	http.HandleFunc("/api/upload", handlers.UploadHandler)
 

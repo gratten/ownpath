@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OwnPath Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script> <!-- HTMX CDN -->
+</head>
+<body>
+    <header>
+        <h1>OwnPath - Your Garmin Activities</h1>
+    </header>
+    
+    <main>
+        <!-- Upload Form -->
+        <section>
+            <h2>Upload FIT File</h2>
+            <form hx-post="/api/upload" hx-target="#upload-response" hx-swap="innerHTML">
+                <input type="file" name="fit_file" accept=".fit" required>
+                <button type="submit">Upload</button>
+            </form>
+            <div id="upload-response"></div> <!-- HTMX will insert success/error message here -->
+        </section>
+        
+        <!-- Activities List -->
+        <section>
+            <h2>Your Activities</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Distance (km)</th>
+                        <th>Elevation (m)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="activity-list" hx-get="/api/activities" hx-trigger="load" hx-swap="innerHTML">
+                    <!-- HTMX will load and swap in the table rows here on page load -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    
+    <footer>
+        <p>Powered by OwnPath</p>
+    </footer>
+</body>
+</html>

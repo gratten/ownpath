@@ -19,6 +19,83 @@ import (
 	"github.com/muktihari/fit/profile/untyped/mesgnum" // For message numbers (e.g., MesgNumFileId)
 )
 
+// ActivitiesHandler returns an HTML partial (table rows) for HTMX
+func ActivitiesHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("ActivitiesHandler called")
+	// Access the DB from the db package (assumes db.DB is exported; adjust if needed, e.g., db.GetDB())
+	rows, err := db.DB.Query("SELECT id, timestamp, type, stats_json FROM activities ORDER BY timestamp DESC")
+	if err != nil {
+		log.Printf("Error querying activities: %v", err)
+		w.Header().Set("Content-Type", "text/html")
+		http.Error(w, "<tr><td colspan='5'>Error loading activities</td></tr>", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var activities []models.Activity
+	for rows.Next() {
+		var id, timestampStr, activityType, statsJSON string
+		if err := rows.Scan(&id, &timestampStr, &activityType, &statsJSON); err != nil {
+			log.Printf("Error scanning row: %v", err)
+			continue
+		}
+
+		// Parse timestamp string to time.Time (assumes RFC3339/ISO format like "2006-01-02T15:04:05Z")
+		timestamp, err := time.Parse(time.RFC3339, timestampStr)
+		if err != nil {
+			log.Printf("Error parsing timestamp '%s' for ID %s: %v", timestampStr, id, err)
+			continue // Skip rows with invalid timestamps
+		}
+
+		activities = append(activities, models.Activity{
+			ID:        id,
+			Timestamp: timestamp, // Now assigns the parsed time.Time
+			Type:      activityType,
+			StatsJSON: statsJSON, // Assign the raw string (as per your model)
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("Error after scanning rows: %v", err)
+	}
+
+	// Build HTML table rows
+	var html string
+	if len(activities) == 0 {
+		html = "<tr><td colspan='5'>No activities yet</td></tr>"
+	} else {
+		for _, act := range activities {
+			// Unmarshal StatsJSON on the fly for display
+			var stats map[string]float64
+			if err := json.Unmarshal([]byte(act.StatsJSON), &stats); err != nil {
+				log.Printf("Error unmarshaling stats_json for ID %s: %v", act.ID, err)
+				continue // Skip rows with invalid stats
+			}
+
+			distance := stats["distance"] // Default to 0 if missing
+			elevation := stats["elevation"]
+
+			// Format Timestamp for display (e.g., "2006-01-02T15:04:05Z")
+			timestampFormatted := act.Timestamp.Format(time.RFC3339)
+
+			html += fmt.Sprintf(
+				`<tr>
+                    <td>%s</td>
+                    <td>%s</td>
+                    <td>%.1f</td>
+                    <td>%.0f</td>
+                    <td><a href="/detail?id=%s">View</a></td>
+                </tr>`,
+				timestampFormatted, act.Type, distance, elevation, act.ID,
+			)
+		}
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, html)
+}
+
 // getSportFormatted is a helper to convert FIT sport ID to a string.
 func getSportFormatted(sport byte) string {
 	switch sport {
