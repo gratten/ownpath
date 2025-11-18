@@ -1,0 +1,57 @@
+# Go-specific ignores
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+pkg/
+
+# Database - ignore the SQLite file (and any backups)
+ownpath.db
+ownpath.db-journal
+*.db
+*.sqlite
+
+# Logs and temp files
+*.log
+*.tmp
+tmp/
+temp/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build and dependency artifacts
+/vendor/
+/go.sum  # If you don't want to track it, but usually it's fine to include
+coverage.txt
+
+# Local config/secrets (if you add any later)
+.env
+config.yaml
+secrets/
+
+# Docker/Start9 ignores (for later steps)
+Dockerfile*
+docker-compose.yml
+*.tar
+*.gz
+
+# Web build artifacts (if you add bundling later)
+web/dist/
+web/build/
+node_modules/
+
+# Ignore any other local files you might add
+local/

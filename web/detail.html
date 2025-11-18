@@ -18,6 +18,8 @@
          hx-trigger="fetchActivity"> <!-- Custom trigger event -->
         <p>Loading activity...</p>
     </div>
+    <!-- Back button - add this below the dynamic content -->
+    <a href="/index.html" class="back-button">Back to Dashboard</a>
     <script>
         // Global HTMX event listeners for debugging
         document.body.addEventListener('htmx:beforeRequest', function(event) {

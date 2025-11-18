@@ -14,3 +14,28 @@ button:hover { background-color: #45a049; }
     table { font-size: 0.8rem; }
     #map { height: 300px; }
 }
+
+.back-button {
+    display: inline-block;
+    margin-top: 20px; /* Space above the button */
+    padding: 10px 20px;
+    background-color: #007bff; /* Blue button - adjust color as needed */
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.back-button:hover {
+    background-color: #0056b3; /* Darker on hover */
+}
+
+/* Mobile-friendly */
+@media (max-width: 600px) {
+    .back-button {
+        width: 100%; /* Full width on small screens */
+        text-align: center;
+    }
+}
