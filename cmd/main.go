@@ -22,6 +22,14 @@ func withLoggingAndErrorHandling(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// Logging middleware to capture all incoming requests
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("Global log: Incoming request - method=%s, path=%s, query=%s", r.Method, r.URL.Path, r.URL.RawQuery)
+		next.ServeHTTP(w, r)
+	})
+}
+
 // // Helper to detect if this is a redirected request (prevents loops; optional)
 // func isRedirected(r *http.Request) bool {
 // 	// Simple check: look for a query param set during redirect
@@ -50,13 +58,22 @@ func main() {
 	// Set up routes with logging and error handling
 	// http.HandleFunc("/health", withLoggingAndErrorHandling(handlers.HealthHandler))
 	http.HandleFunc("/api/activities", withLoggingAndErrorHandling(handlers.ActivitiesHandler))
+	http.HandleFunc("/api/activity", handlers.ActivityHandler) // Ensure this line exists!
 	// http.HandleFunc("/api/sync", withLoggingAndErrorHandling(handlers.SyncHandler))
 	http.HandleFunc("/api/upload", handlers.UploadHandler)
 
+	// Apply logging middleware to the default mux
+	loggedMux := loggingMiddleware(http.DefaultServeMux)
+
 	// Start the server
-	port := ":8080" // Default port; can be configured later for Start9
-	log.Printf("Starting server on %s", port)
-	if err := http.ListenAndServe(port, nil); err != nil {
-		log.Fatalf("Server failed to start: %v", err)
+	// port := ":8080" // Default port; can be configured later for Start9
+	// log.Printf("Starting server on %s", port)
+	// if err := http.ListenAndServe(port, nil); err != nil {
+	// 	log.Fatalf("Server failed to start: %v", err)
+	// }
+	log.Println("Server starting on :8080")
+	if err := http.ListenAndServe(":8080", loggedMux); err != nil {
+		log.Fatal(err)
 	}
+
 }

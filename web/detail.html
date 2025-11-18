@@ -3,47 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activity Detail - OwnPath</title>
-    <link rel="stylesheet" href="/styles.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"> <!-- Leaflet CSS CDN -->
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script> <!-- HTMX CDN -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> <!-- Leaflet JS CDN -->
-    <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script> <!-- Leaflet GPX plugin for loading GPX tracks -->
+    <title>OwnPath - Activity Detail</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css"> <!-- Your minimal CSS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="https://unpkg.com/leaflet-gpx@1.7.0/gpx.js"></script> <!-- For GPX parsing -->
 </head>
 <body>
-    <header>
-        <h1>Activity Detail</h1>
-        <a href="/">Back to Dashboard</a>
-    </header>
-    
-    <main>
-        <!-- Stats Section (loaded dynamically) -->
-        <section id="stats" hx-get="/api/activity?id={insert-id-here}" hx-trigger="load" hx-swap="innerHTML">
-            <!-- HTMX will insert stats HTML here, e.g., <p>Type: Running | Distance: 5.2km | Elevation: 100m</p> -->
-        </section>
-        
-        <!-- Map Section -->
-        <section>
-            <h2>Route Map</h2>
-            <div id="map" style="height: 400px;"></div>
-        </section>
-    </main>
-    
+    <h1>Activity Detail</h1>
+    <div id="activity-details" 
+         hx-get="/api/activity" 
+         hx-swap="innerHTML"
+         hx-trigger="fetchActivity"> <!-- Custom trigger event -->
+        <p>Loading activity...</p>
+    </div>
     <script>
-        // Initialize Leaflet map
-        var map = L.map('map').setView([0, 0], 2); // Default view
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-        
-        // Use HTMX to fetch GPX and load it (assuming /api/activity returns GPX in a div with id="gpx-data")
-        htmx.onLoad(function() {
-            htmx.ajax('GET', '/api/activity?id={insert-id-here}', {target: '#stats'}).then(function() {
-                var gpxData = document.getElementById('gpx-data').innerHTML; // Assume backend injects <div id="gpx-data">GPX XML</div>
-                new L.GPX(gpxData, {async: true}).on('loaded', function(e) {
-                    map.fitBounds(e.target.getBounds());
-                }).addTo(map);
-            });
+        // Global HTMX event listeners for debugging
+        document.body.addEventListener('htmx:beforeRequest', function(event) {
+            console.log('HTMX: Starting request to', event.detail.pathInfo.requestPath);
+        });
+        document.body.addEventListener('htmx:responseError', function(event) {
+            console.error('HTMX: Response error - status:', event.detail.xhr.status, 'response:', event.detail.xhr.responseText);
+        });
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            console.log('HTMX: Request complete - success:', event.detail.successful);
+        });
+        // Handle URL param, set hx-vals, and trigger HTMX fetch
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Step 1: Page loaded - processing URL params');
+            const urlParams = new URLSearchParams(window.location.search);
+            const id = urlParams.get('id');
+            if (id) {
+                console.log('Step 2: Found ID in URL:', id);
+                const detailsDiv = document.getElementById('activity-details');
+                if (detailsDiv) {
+                    // Set hx-vals dynamically
+                    detailsDiv.setAttribute('hx-vals', `{"id": "${id}"}`);
+                    console.log('Step 3: hx-vals set to:', detailsDiv.getAttribute('hx-vals'));
+                    // Re-process the element
+                    htmx.process(detailsDiv);
+                    console.log('Step 4: HTMX processed');
+                    // Trigger the custom event
+                    setTimeout(() => {
+                        const triggered = htmx.trigger(detailsDiv, 'fetchActivity');
+                        console.log('Step 5: HTMX trigger attempted - success:', triggered);
+                    }, 100);
+                } else {
+                    console.error('Error: #activity-details not found');
+                }
+            } else {
+                console.warn('Warning: No ID in URL - cannot load activity');
+                const detailsDiv = document.getElementById('activity-details');
+                if (detailsDiv) detailsDiv.innerHTML = '<p>Error: No ID provided</p>';
+            }
+        });
+        // Handle HTMX swap and map init
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            console.log('HTMX afterSwap event fired for target:', event.target.id);
+            if (event.target.id === 'activity-details') {
+                console.log('Step 6.1: Swap complete - checking elements');
+                const mapElement = document.getElementById('map');
+                const gpxElement = document.getElementById('gpx-data');
+
+                if (!mapElement) {
+                    console.error('Step 6.2: Error - #map element not found');
+                    return;
+                }
+                console.log('Step 6.2: #map element found');
+
+                if (!gpxElement) {
+                    console.error('Step 6.3: Error - #gpx-data element not found');
+                    mapElement.innerHTML = '<p>Error: No map data available</p>';
+                    return;
+                }
+                console.log('Step 6.3: #gpx-data element found');
+
+                // Decode if base64 encoded
+                let gpxData = gpxElement.innerText.trim();
+                if (gpxElement.getAttribute('data-encoded') === 'true') {
+                    console.log('Step 6.4: Decoding base64 GPX');
+                    gpxData = atob(gpxData); // Decode base64
+                }
+                console.log('Step 6.5: Decoded GPX length:', gpxData.length);
+                console.log('Step 6.6: Decoded GPX snippet:', gpxData.substring(0, 200)); // Log for inspection
+                console.log('Step 6.7: Full decoded GPX (for debug):', gpxData); // Log full string - copy from console to validate
+
+                if (gpxData.length === 0 || !gpxData.includes('<gpx')) { // Relaxed check for GPX header
+                    console.warn('Step 6.8: Warning - Empty or invalid GPX data (no GPX structure)');
+                    mapElement.innerHTML = '<p>No route data to display (GPX may be empty or invalid)</p>';
+                    return;
+                }
+
+                try {
+                    console.log('Step 6.9: Initializing Leaflet map');
+                    const map = L.map('map').setView([0, 0], 2);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+
+                    console.log('Step 6.10: Loading GPX into map');
+                    new L.GPX(gpxData, { async: true, marker_options: { wptIcons: {} } }).on('loaded', function(e) {
+                        console.log('Step 6.11: GPX loaded successfully - fitting bounds');
+                        const bounds = e.target.getBounds();
+                        if (bounds.isValid()) {
+                            map.fitBounds(bounds);
+                        } else {
+                            console.warn('Step 6.12: Invalid bounds - using default view');
+                            map.setView([0, 0], 2);
+                        }
+                    }).on('error', function(e) {
+                        console.error('Step 6.11: Error loading GPX:', e.err);
+                        mapElement.innerHTML = '<p>Error loading route: ' + (e.err || 'Unknown error') + '</p>';
+                    }).addTo(map);
+                } catch (err) {
+                    console.error('Step 6.13: Error during map initialization:', err.message);
+                }
+            }
         });
     </script>
 </body>

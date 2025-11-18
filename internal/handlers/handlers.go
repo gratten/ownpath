@@ -2,6 +2,8 @@ package handlers // Assuming this is internal/handlers; adjust if needed
 
 import (
 	"bytes"
+	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,6 +20,92 @@ import (
 	"github.com/muktihari/fit/profile/mesgdef"         // For typed messages (e.g., NewFileId, NewSession)
 	"github.com/muktihari/fit/profile/untyped/mesgnum" // For message numbers (e.g., MesgNumFileId)
 )
+
+// ActivityHandler handles GET requests to /api/activity?id=<uuid>
+func ActivityHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract ID from query params
+	id := r.URL.Query().Get("id")
+	log.Printf("ActivityHandler called with ID: '%s' (length: %d)", id, len(id)) // Log even if empty
+	if id == "" {
+		http.Error(w, "Missing ID parameter", http.StatusBadRequest)
+		log.Printf("Error: Missing ID in /api/activity request")
+		return
+	}
+
+	// // Optional: Validate UUID format
+	// if _, err := uuid.Parse(id); err != nil {
+	// 	http.Error(w, "Invalid ID format", http.StatusBadRequest)
+	// 	log.Printf("Error: Invalid UUID %s: %v", id, err)
+	// 	return
+	// }
+
+	// Query the DB for the activity
+	var activity models.Activity
+	row := db.DB.QueryRow("SELECT id, timestamp, type, stats_json, gpx_data FROM activities WHERE id = ?", id)
+	err := row.Scan(&activity.ID, &activity.Timestamp, &activity.Type, &activity.StatsJSON, &activity.GPXData)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Activity not found", http.StatusNotFound)
+			log.Printf("Error: Activity %s not found", id)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("Error querying activity %s: %v", id, err)
+		return
+	}
+
+	// Unmarshal StatsJSON for display (assuming it's JSON like {"distance": 10.5, "elevation": 200})
+	var stats map[string]interface{}
+	if err := json.Unmarshal([]byte(activity.StatsJSON), &stats); err != nil {
+		log.Printf("Warning: Failed to unmarshal stats for %s: %v", id, err)
+		// Fallback: Display raw JSON
+		stats = map[string]interface{}{"raw": activity.StatsJSON}
+	}
+
+	// ... other code in ActivityHandler ...
+
+	// After querying DB
+	log.Printf("Queried GPX length from DB: %d for ID %s", len(activity.GPXData), id)
+
+	// Base64 encode GPX for safe HTML embedding (avoids escaping issues)
+	gpxEncoded := base64.StdEncoding.EncodeToString([]byte(activity.GPXData))
+	log.Printf("Encoded GPX length: %d", len(gpxEncoded))
+
+	// Build HTML partial
+	html := `<div id="activity-details">
+		<h2>Activity: ` + activity.Type + ` on ` + activity.Timestamp.Format("2006-01-02 15:04:05") + `</h2>
+		<ul>`
+	for key, val := range stats {
+		html += fmt.Sprintf("<li><strong>%s:</strong> %v</li>", key, val)
+	}
+	html += `</ul>
+		<div id="map" style="height: 400px; width: 100%;"></div>
+		<div id="gpx-data" style="display: none;" data-encoded="true">` + gpxEncoded + `</div> <!-- Base64 encoded -->
+	</div>`
+
+	log.Printf("Returning HTML length: %d (with encoded GPX length: %d)", len(html), len(gpxEncoded))
+
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprint(w, html)
+	log.Printf("Successfully served activity %s", id)
+
+	// // Build HTML partial for HTMX
+	// html := `<div id="activity-details">
+	//     <h2>Activity: ` + activity.Type + ` on ` + activity.Timestamp.Format("2006-01-02 15:04:05") + `</h2>
+	//     <ul>`
+	// for key, val := range stats {
+	// 	html += fmt.Sprintf("<li><strong>%s:</strong> %v</li>", key, val)
+	// }
+	// html += `</ul>
+	//     <div id="map" style="height: 400px;"></div> <!-- Map container -->
+	//     <div id="gpx-data" style="display: none;">` + activity.GPXData + `</div> <!-- Hidden GPX for JS -->
+	// </div>`
+
+	// // Return the HTML partial
+	// w.Header().Set("Content-Type", "text/html")
+	// fmt.Fprint(w, html)
+	// log.Printf("Successfully served activity %s", id)
+}
 
 // ActivitiesHandler returns an HTML partial (table rows) for HTMX
 func ActivitiesHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +172,7 @@ func ActivitiesHandler(w http.ResponseWriter, r *http.Request) {
                     <td>%s</td>
                     <td>%.1f</td>
                     <td>%.0f</td>
-                    <td><a href="/detail?id=%s">View</a></td>
+                    <td><a href="/detail.html?id=%s">View</a></td>
                 </tr>`,
 				timestampFormatted, act.Type, distance, elevation, act.ID,
 			)

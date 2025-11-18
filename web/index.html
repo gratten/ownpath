@@ -14,14 +14,16 @@
     
     <main>
         <!-- Upload Form -->
-        <section>
-            <h2>Upload FIT File</h2>
-            <form hx-post="/api/upload" hx-target="#upload-response" hx-swap="innerHTML">
+        <div id="upload-section">
+            <form hx-post="/api/upload" 
+                hx-target="#upload-response" 
+                hx-swap="innerHTML" 
+                enctype="multipart/form-data">  <!-- This is the key addition! -->
                 <input type="file" name="fit_file" accept=".fit" required>
-                <button type="submit">Upload</button>
+                <button type="submit">Upload FIT</button>
             </form>
-            <div id="upload-response"></div> <!-- HTMX will insert success/error message here -->
-        </section>
+            <div id="upload-response"></div>
+        </div>
         
         <!-- Activities List -->
         <section>
