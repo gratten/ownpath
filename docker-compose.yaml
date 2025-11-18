@@ -1,0 +1,8 @@
+version: '3'
+services:
+  ownpath:
+    build: .  # Builds from your Dockerfile
+    ports:
+      - "8080:8080"  # Map container's 8080 to host's 8080
+    volumes:
+      - ./data:/app/data  # Persist DB on host (creates ./data folder)

@@ -1,0 +1,39 @@
+id: ownpath
+title: OwnPath
+version: 0.1.0
+release-notes: Initial MVP release for manual Garmin FIT file management.
+license: MIT
+wrapper-repo: "https://github.com/yourusername/ownpath"  # Update with your GitHub repo URL
+upstream-repo: "https://github.com/yourusername/ownpath"  # Same as above if it's the same repo
+support-site: "https://github.com/yourusername/ownpath/issues"  # Or your preferred support link
+marketing-site: "https://yourwebsite.com/ownpath"  # Optional
+description:
+  short: Self-hosted app for managing Garmin GPS data with data sovereignty.
+  long: OwnPath allows manual ingestion of FIT files, parsing into stats and GPX maps, stored locally in SQLite. View via a simple web UI with HTMX and Leaflet.js.
+assets:
+  license: LICENSE  # Assuming you have a LICENSE file (e.g., MIT)
+  icon: icon.png  # Add an icon.png to your repo root (e.g., 256x256 PNG)
+  instructions: README.md
+  docker-images: Dockerfile  # Points to your Dockerfile
+main:
+  type: docker
+  image: ownpath  # The name of your Docker image (built from Dockerfile)
+  entrypoint: "/app/ownpath"  # Path to your binary inside the container
+  args: []  # Any CLI args if needed
+  mounts:
+    main: /app/data  # Maps to the VOLUME for DB persistence
+interfaces:
+  main:
+    name: Web UI
+    description: Access the OwnPath dashboard and upload FIT files.
+    tor-config:
+      port-mapping:
+        80: "8080"  # Maps Tor port 80 to container's 8080
+    lan-config:
+      443:
+        ssl: true
+        internal: 8080  # HTTPS on LAN
+    ui: true
+    protocols: ["tcp", "http"]
+config: {}  # Empty for MVP; add Garmin API config here later (e.g., OAuth keys)
+dependencies: {}  # No dependencies for now
